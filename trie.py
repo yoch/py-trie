@@ -8,25 +8,6 @@ class End:
 
 _END = End()    # sentinel (end of key)
 
-_node = dict    # node factory, currently simple dict
-
-
-def _iterate_values(node):
-    for k, v in node.items():
-        if k is not _END:
-            yield from _iterate_values(v)
-        else:
-            yield v
-
-def _iterate_items(node, lkey):
-    if _END in node:
-        yield tuple(lkey), node[_END]
-    lkey.append(None)   # placeholder
-    for k, d in node.items():
-        if k is not _END:
-            lkey[-1] = k
-            yield from _iterate_items(d, lkey)
-    lkey.pop()
 
 
 #TODO: implement pattern search
@@ -38,10 +19,30 @@ def _iterate_items(node, lkey):
 class Trie(collections.abc.MutableMapping):
     "keys must be a sequence"
 
-    __slots__ = ('_root', '_size')
+    _NodeFactory = dict
+    _KeyFactory = tuple
+
+    @classmethod
+    def _iterate_values(cls, node):
+        for k, v in node.items():
+            if k is not _END:
+                yield from cls._iterate_values(v)
+            else:
+                yield v
+
+    @classmethod
+    def _iterate_items(cls, node, lkey):
+        if _END in node:
+            yield cls._KeyFactory(lkey), node[_END]
+        lkey.append(None)   # placeholder
+        for k, d in node.items():
+            if k is not _END:
+                lkey[-1] = k
+                yield from cls._iterate_items(d, lkey)
+        lkey.pop()
 
     def __init__(self, **kwargs):
-        self._root = _node()
+        self._root = self._NodeFactory()
         self._size = 0
         # initialize values
         for key, value in kwargs.items():
@@ -53,7 +54,7 @@ class Trie(collections.abc.MutableMapping):
     def __setitem__(self, key, val):
         node = self._root
         for sym in key:
-            node = node.setdefault(sym, _node())
+            node = node.setdefault(sym, self._NodeFactory())
         if _END not in node:
             self._size += 1
         node[_END] = val
@@ -103,9 +104,11 @@ class Trie(collections.abc.MutableMapping):
         return iter(k for k, v in self.items())
 
     def items(self, prefix=None):
-        lpre = [] if prefix is None else list(prefix)
-        root = self._root if prefix is None else self._get_subtrie(prefix)
-        return _iterate_items(root, lpre)
+        if prefix is None:
+            return self._iterate_items(self._root, [])
+        else:
+            root = self._get_subtrie(prefix)
+            return self._iterate_items(root, list(prefix))
 
     def keys(self, prefix=None):
         return iter(k for k, v in self.items(prefix))
@@ -113,7 +116,7 @@ class Trie(collections.abc.MutableMapping):
     def values(self, prefix=None):
         # more efficient than use items
         root = self._root if prefix is None else self._get_subtrie(prefix)
-        return _iterate_values(root)
+        return self._iterate_values(root)
 
     def _getsize(self):
         # maybe replaced by nodes which store size
@@ -130,22 +133,32 @@ class Trie(collections.abc.MutableMapping):
         except KeyError:
             raise KeyError(prefix) from None
 
-    #def __repr__(self):
-        #return repr(self._root)
+    def __repr__(self):
+        return self.__class__.__name__ + '()'
+
+
+
+class StringTrie(Trie):
+    _KeyFactory = ''.join
 
 
 
 class DefaultTrie(Trie):
     "same as defaultdict, but for tries"
 
-    __slots__ = ('_default')
-
-    def __init__(self, default_factory):
-        self._default = default_factory
-
     def __getitem__(self, key):
         try:
             value = super().__getitem__(key)
         except KeyError:
-            self[key] = value = self._default()
+            self[key] = value = self.default_factory()
         return value
+
+    def __repr__(self):
+        return self.__class__.__name__ + '(' + repr(self.default_factory) + ')'
+
+
+# factory function
+def defaulttrie(typ):
+    mapping = DefaultTrie()
+    mapping.default_factory = typ
+    return mapping
