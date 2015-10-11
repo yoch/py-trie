@@ -1,28 +1,51 @@
 import collections.abc
 
-# used for internal representation only
 class End:
+    # used for internal representation only
     def __repr__(self):
         return '$'
 
-_END = End()
+
+_END = End()    # sentinel (end of key)
+
 _node = dict    # node factory, currently simple dict
 
 
-#TODO: implement prefix and pattern
+def _iterate_values(node):
+    for k, v in node.items():
+        if k is not _END:
+            yield from _iterate_values(v)
+        else:
+            yield v
+
+def _iterate_items(node, lkey):
+    if _END in node:
+        yield tuple(lkey), node[_END]
+    lkey.append(None)   # placeholder
+    for k, d in node.items():
+        if k is not _END:
+            lkey[-1] = k
+            yield from _iterate_items(d, lkey)
+    lkey.pop()
+
+
+#TODO: implement pattern search
 #TODO: implement delete subtrie by prefix
 #TODO: implement proper copy
-#TODO: implement sortest and longest prefix lookups ?
-#TODO: maybe implement pop and setdefault for efficiency ?
+#TODO: implement sortest and longest prefix lookups
+#TODO: implement pop and setdefault for efficiency
 
 class Trie(collections.abc.MutableMapping):
     "keys must be a sequence"
 
     __slots__ = ('_root', '_size')
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         self._root = _node()
         self._size = 0
+        # initialize values
+        for key, value in kwargs.items():
+            self[key] = value
 
     def __len__(self):
         return self._size
@@ -60,15 +83,6 @@ class Trie(collections.abc.MutableMapping):
         except KeyError:
             raise KeyError(key) from None
 
-##    def __contains__(self, key):
-##        node = self._root
-##        for sym in key:
-##            if sym not in node:
-##                return False
-##            else:
-##                node = node[sym]
-##        return _END in node
-
     def update(self, other):
         # efficient update: merge trie 2 to trie 1
         def merge(t1, t2):
@@ -85,52 +99,40 @@ class Trie(collections.abc.MutableMapping):
         self._root.clear()
         self._size = 0
 
-    def iter_items(self):
-        def iterate(node, lkey):
-            if _END in node:
-                yield tuple(lkey), node[_END]
-            lkey = lkey + [None]
-            for k, d in node.items():
-                if k is not _END:
-                    lkey[-1] = k
-                    yield from iterate(d, lkey)
-        return iterate(self._root, [])
-
-    def iter_keys(self):
-        return iter(k for k, v in self.iter_items())
-
     def __iter__(self):
-        return self.iter_keys()
+        return iter(k for k, v in self.items())
 
-    def iter_values(self):
-        # more efficient than use iter_items()
-        def iterate(node):
-            for k, v in node.items():
-                if k is not _END:
-                    yield from iterate(v)
-                else:
-                    yield v
-        return iterate(self._root)
+    def items(self, prefix=None):
+        lpre = [] if prefix is None else list(prefix)
+        root = self._root if prefix is None else self._get_subtrie(prefix)
+        return _iterate_items(root, lpre)
+
+    def keys(self, prefix=None):
+        return iter(k for k, v in self.items(prefix))
+
+    def values(self, prefix=None):
+        # more efficient than use items
+        root = self._root if prefix is None else self._get_subtrie(prefix)
+        return _iterate_values(root)
 
     def _getsize(self):
-        # costly operation, may be replaced by nodes which store size
+        # maybe replaced by nodes which store size
         def rec_count(node):
             return sum(1 if k is _END else rec_count(nd) for k, nd in node.items())
         return rec_count(self._root)
 
-##    def subtrie(self, prefix):
-##        nd = self._root
-##        for sym in prefix:
-##            if sym in nd:
-##                nd = nd[sym]
-##            else:
-##                nd = _node()
-##                break
-##        # mauvais...
-##        retval = Trie()
-##        retval._root = nd
-##        retval._size = retval._getsize()
-##        return retval
+    def _get_subtrie(self, prefix):
+        try:
+            nd = self._root
+            for sym in prefix:
+                nd = nd[sym]
+            return nd
+        except KeyError:
+            raise KeyError(prefix) from None
+
+    #def __repr__(self):
+        #return repr(self._root)
+
 
 
 class DefaultTrie(Trie):
