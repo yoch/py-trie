@@ -11,7 +11,6 @@ _END = End()    # sentinel (end of key)
 
 
 #TODO: implement pattern search
-#TODO: implement delete subtrie by prefix
 #TODO: implement proper copy
 #TODO: implement sortest and longest prefix lookups
 #TODO: implement pop and setdefault for efficiency
@@ -40,6 +39,11 @@ class Trie(collections.abc.MutableMapping):
                 lkey[-1] = k
                 yield from cls._iterate_items(d, lkey)
         lkey.pop()
+
+    @classmethod
+    def _get_size(cls, node):
+        # maybe replaced by nodes which store size ?
+        return sum(1 if k is _END else cls._get_size(nd) for k, nd in node.items())
 
     def __init__(self, **kwargs):
         self._root = self._NodeFactory()
@@ -118,11 +122,12 @@ class Trie(collections.abc.MutableMapping):
         root = self._root if prefix is None else self._get_subtrie(prefix)
         return self._iterate_values(root)
 
-    def _getsize(self):
-        # maybe replaced by nodes which store size
-        def rec_count(node):
-            return sum(1 if k is _END else rec_count(nd) for k, nd in node.items())
-        return rec_count(self._root)
+    def remove(self, prefix):
+        parent, node = None, self._root
+        for k in prefix:
+            parent, node = node, node[k]
+        del parent[k]
+        self._size -= self._get_size(node)
 
     def _get_subtrie(self, prefix):
         try:
