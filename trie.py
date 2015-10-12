@@ -31,14 +31,13 @@ class Trie(collections.abc.MutableMapping):
 
     @classmethod
     def _iterate_items(cls, node, lkey):
-        if _END in node:
-            yield cls._KeyFactory(lkey), node[_END]
-        lkey.append(None)   # placeholder
-        for k, d in node.items():
-            if k is not _END:
-                lkey[-1] = k
-                yield from cls._iterate_items(d, lkey)
-        lkey.pop()
+        nlkey = lkey + [None]   # placeholder
+        for k, v in node.items():
+            if k is _END:
+                yield cls._KeyFactory(lkey), v
+            else:
+                nlkey[-1] = k
+                yield from cls._iterate_items(v, nlkey)
 
     @classmethod
     def _get_size(cls, node):
