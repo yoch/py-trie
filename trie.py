@@ -21,11 +21,11 @@ class Trie(collections.abc.MutableMapping):
     _NodeFactory = dict
     _KeyFactory = tuple
 
-    @classmethod
-    def _iterate_values(cls, node):
+    @staticmethod
+    def _iterate_values(node):
         for k, v in node.items():
             if k is not _END:
-                yield from cls._iterate_values(v)
+                yield from Trie._iterate_values(v)
             else:
                 yield v
 
@@ -39,10 +39,19 @@ class Trie(collections.abc.MutableMapping):
                 nlkey[-1] = k
                 yield from cls._iterate_items(v, nlkey)
 
-    @classmethod
-    def _get_size(cls, node):
+    @staticmethod
+    def _get_size(node):
         # maybe replaced by nodes which store size ?
-        return sum(1 if k is _END else cls._get_size(nd) for k, nd in node.items())
+        return sum(1 if k is _END else Trie._get_size(nd) for k, nd in node.items())
+
+    def _get_subtrie(self, prefix):
+        try:
+            nd = self._root
+            for sym in prefix:
+                nd = nd[sym]
+            return nd
+        except KeyError:
+            raise KeyError(prefix) from None
 
     def __init__(self, **kwargs):
         self._root = self._NodeFactory()
@@ -87,6 +96,9 @@ class Trie(collections.abc.MutableMapping):
         except KeyError:
             raise KeyError(key) from None
 
+    def __iter__(self):
+        return iter(k for k, v in self.items())
+
     def update(self, other):
         # efficient update: merge trie 2 to trie 1
         def merge(t1, t2):
@@ -102,9 +114,6 @@ class Trie(collections.abc.MutableMapping):
         # clear directly all the trie
         self._root.clear()
         self._size = 0
-
-    def __iter__(self):
-        return iter(k for k, v in self.items())
 
     def items(self, prefix=None):
         if prefix is None:
@@ -127,15 +136,6 @@ class Trie(collections.abc.MutableMapping):
             parent, node = node, node[k]
         del parent[k]
         self._size -= self._get_size(node)
-
-    def _get_subtrie(self, prefix):
-        try:
-            nd = self._root
-            for sym in prefix:
-                nd = nd[sym]
-            return nd
-        except KeyError:
-            raise KeyError(prefix) from None
 
     def __repr__(self):
         return self.__class__.__name__ + '()'
