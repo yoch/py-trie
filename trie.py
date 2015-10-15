@@ -1,5 +1,3 @@
-import collections.abc
-
 class End:
     # used for internal representation only
     def __repr__(self):
@@ -13,13 +11,17 @@ _END = End()    # sentinel (end of key)
 #TODO: implement pattern search
 #TODO: implement proper copy
 #TODO: implement sortest and longest prefix lookups
-#TODO: implement pop and setdefault for efficiency
 
-class Trie(collections.abc.MutableMapping):
+# avoid using collections.abc implementation
+# because it use __getitem__ for get, pop, setdefault
+# and __contains__, which breaks DefaultTrie
+
+class Trie:
     "keys must be a sequence"
 
     _NodeFactory = dict
     _KeyFactory = tuple
+    __marker = object()
 
     @staticmethod
     def _iterate_values(node):
@@ -53,6 +55,27 @@ class Trie(collections.abc.MutableMapping):
         except KeyError:
             raise KeyError(prefix) from None
 
+    def __get(self, key):
+        node = self._root
+        for sym in key:
+            node = node[sym]
+        return node[_END]
+
+    def __pop(self, key):
+        def rec_pop(node, i=0):
+            if i == len(key):
+                ret = node.pop(_END)
+                self._size -= 1
+                return ret
+            else:
+                k = key[i]
+                nd = node[k]
+                ret = rec_pop(nd, i + 1)
+                if not nd:
+                    node.pop(k)
+                return ret
+        return rec_pop(self._root)
+
     def __init__(self, **kwargs):
         self._root = self._NodeFactory()
         self._size = 0
@@ -72,35 +95,53 @@ class Trie(collections.abc.MutableMapping):
         node[_END] = val
 
     def __delitem__(self, key):
-        def rec_del(node, i=0):
-            if i == len(key):
-                node.pop(_END)
-            else:
-                k = key[i]
-                nd = node[k]
-                rec_del(nd, i + 1)
-                if not nd:
-                    node.pop(k)
         try:
-            rec_del(self._root)
-            self._size -= 1
+            self.__pop(key)
         except KeyError:
             raise KeyError(key) from None
 
     def __getitem__(self, key):
         try:
+            return self.__get(key)
+        except KeyError:
+            raise KeyError(key) from None
+
+    def __contains__(self, key):
+        try:
             node = self._root
             for sym in key:
                 node = node[sym]
-            return node[_END]
+            return _END in node
         except KeyError:
-            raise KeyError(key) from None
+            return False
 
     def __iter__(self):
         return iter(k for k, v in self.items())
 
+    def get(self, key, default=None):
+        try:
+            return self.__get(key)
+        except KeyError:
+            return default
+
+    def pop(self, key, default=__marker):
+        try:
+            return self.__pop(key)
+        except KeyError:
+            if default is self.__marker:
+                raise KeyError(key) from None
+            return default
+
+    def setdefault(self, key, default=None):
+        try:
+            return self.__get(key)
+        except KeyError:
+            self[key] = default
+            return default
+
+    # efficient update: merge trie 2 to trie 1
     def update(self, other):
-        # efficient update: merge trie 2 to trie 1
+        # assert type(self) is type(other)
         def merge(t1, t2):
             for k, nd in t2.items():
                 if k in t1 and k is not _END:
@@ -150,6 +191,10 @@ class StringTrie(Trie):
 class DefaultTrie(Trie):
     "same as defaultdict, but for tries"
 
+    def __init__(self, default_factory):
+        super().__init__()
+        self.default_factory = default_factory
+
     def __getitem__(self, key):
         try:
             value = super().__getitem__(key)
@@ -159,10 +204,3 @@ class DefaultTrie(Trie):
 
     def __repr__(self):
         return self.__class__.__name__ + '(' + repr(self.default_factory) + ')'
-
-
-# factory function
-def defaulttrie(typ):
-    mapping = DefaultTrie()
-    mapping.default_factory = typ
-    return mapping
