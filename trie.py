@@ -23,11 +23,11 @@ class Trie:
     _KeyFactory = tuple
     __marker = object()
 
-    @staticmethod
-    def _iterate_values(node):
+    @classmethod
+    def _iterate_values(cls, node):
         for k, v in node.items():
             if k is not _END:
-                yield from Trie._iterate_values(v)
+                yield from cls._iterate_values(v)
             else:
                 yield v
 
@@ -193,6 +193,33 @@ class Trie:
 class StringTrie(Trie):
     _KeyFactory = ''.join
 
+
+
+import operator
+
+class SortedTrie(Trie):
+    "trie implementation with iterators in lexicographic keys order"
+
+    @staticmethod
+    def _iter_nodes_sorted(node):
+        yield from sorted([(k, v) for k, v in node.items() if k is not _END],
+                          key=operator.itemgetter(0))
+
+    @classmethod
+    def _iterate_values(cls, node):
+        if _END in node:
+            yield node[_END]
+        for k, v in cls._iter_nodes_sorted(node):
+            yield from cls._iterate_values(v)
+
+    @classmethod
+    def _iterate_items(cls, node, lkey):
+        if _END in node:
+            yield cls._KeyFactory(lkey), node[_END]
+        nlkey = lkey + [None]   # placeholder
+        for k, v in cls._iter_nodes_sorted(node):
+            nlkey[-1] = k
+            yield from cls._iterate_items(v, nlkey)
 
 
 class DefaultTrie(Trie):
