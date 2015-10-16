@@ -53,7 +53,8 @@ class Trie:
                 nd = nd[sym]
             return nd
         except KeyError:
-            raise KeyError(prefix) from None
+            # return Node object ?
+            return None
 
     def __get(self, key):
         node = self._root
@@ -158,10 +159,11 @@ class Trie:
 
     def items(self, prefix=None):
         if prefix is None:
-            return self._iterate_items(self._root, [])
+            yield from self._iterate_items(self._root, [])
         else:
             root = self._get_subtrie(prefix)
-            return self._iterate_items(root, list(prefix))
+            if root:
+                yield from self._iterate_items(root, list(prefix))
 
     def keys(self, prefix=None):
         return iter(k for k, v in self.items(prefix))
@@ -169,14 +171,19 @@ class Trie:
     def values(self, prefix=None):
         # more efficient than use items
         root = self._root if prefix is None else self._get_subtrie(prefix)
-        return self._iterate_values(root)
+        if root:
+            yield from self._iterate_values(root)
 
+    #TODO: return subtrie ?
     def remove(self, prefix):
-        parent, node = None, self._root
-        for k in prefix:
-            parent, node = node, node[k]
-        del parent[k]
-        self._size -= self._get_size(node)
+        try:
+            parent, node = None, self._root
+            for k in prefix:
+                parent, node = node, node[k]
+            del parent[k]
+            self._size -= self._get_size(node)
+        except KeyError:
+            pass
 
     def __repr__(self):
         return self.__class__.__name__ + '()'
