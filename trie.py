@@ -72,7 +72,7 @@ class Trie:
                 nd = node[k]
                 ret = rec_pop(nd, i + 1)
                 if not nd:
-                    node.pop(k)
+                    del node[k]
                 return ret
         return rec_pop(self._root)
 
