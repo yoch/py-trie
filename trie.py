@@ -8,6 +8,7 @@ _END = End()    # sentinel (end of key)
 
 
 
+#TODO: implement __eq__ and __ne__
 #TODO: implement pattern search
 #TODO: implement proper copy
 #TODO: implement sortest and longest prefix lookups
@@ -118,6 +119,14 @@ class Trie:
 
     def __iter__(self):
         return iter(k for k, v in self.items())
+
+    def __eq__(self, other):
+        if type(self) != type(other):
+            return False
+        return self._root == other._root
+
+    def __ne__(self, other):
+        return not (self == other)
 
     def get(self, key, default=None):
         try:
