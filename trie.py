@@ -1,3 +1,5 @@
+import collections.abc
+
 class End:
     # used for internal representation only
     def __repr__(self):
@@ -78,12 +80,11 @@ class Trie:
                 return ret
         return rec_pop(self._root)
 
-    def __init__(self, **kwargs):
+    def __init__(self, *args, **kwargs):
         self._root = self._NodeFactory()
         self._size = 0
         # initialize values
-        for key, value in kwargs.items():
-            self[key] = value
+        self.update(*args, **kwargs)
 
     def __len__(self):
         return self._size
@@ -149,17 +150,27 @@ class Trie:
             self[key] = default
             return default
 
-    # efficient update: merge trie 2 to trie 1
-    def update(self, other):
-        # assert type(self) is type(other)
+    def update(self, *args, **kwargs):
+        # efficient merge trie 2 to trie 1
         def merge(t1, t2):
             for k, nd in t2.items():
                 if k in t1 and k is not _END:
                     merge(t1[k], nd)
                 else:
                     t1[k] = nd
-        merge(self._root, other._root)
-        self._size += other._size
+        other = args[0] if len(args) >= 1 else ()
+        if isinstance(other, Trie):
+            merge(self._root, other._root)
+            self._size += other._size
+        elif isinstance(other, collections.abc.Mapping):
+            for key in other:
+                self[key] = other[key]
+        else:
+            for key, value in other:
+                self[key] = value
+        # update kwargs
+        for key, value in kwargs.items():
+            self[key] = value
 
     def clear(self):
         # clear directly the whole trie
@@ -195,7 +206,7 @@ class Trie:
             pass
 
     def __repr__(self):
-        return self.__class__.__name__ + '()'
+        return '%s(%r)' % (self.__class__.__name__, dict(self))
 
 
 
@@ -234,8 +245,8 @@ class SortedTrie(Trie):
 class DefaultTrie(Trie):
     "same as defaultdict, but for tries"
 
-    def __init__(self, default_factory):
-        super().__init__()
+    def __init__(self, default_factory, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.default_factory = default_factory
 
     def __getitem__(self, key):
