@@ -2,16 +2,16 @@ class End:
     # used for internal representation only
     def __repr__(self):
         return '$'
+    def __reduce__(self):
+        return '_END'
 
 
 _END = End()    # sentinel (end of key)
 
 
-
-#TODO: implement __eq__ and __ne__
-#TODO: implement pattern search
 #TODO: implement proper copy
 #TODO: implement sortest and longest prefix lookups
+#TODO: implement pattern search ?
 
 # avoid using collections.abc implementation
 # because it use __getitem__ for get, pop, setdefault
@@ -162,7 +162,7 @@ class Trie:
         self._size += other._size
 
     def clear(self):
-        # clear directly all the trie
+        # clear directly the whole trie
         self._root.clear()
         self._size = 0
 
