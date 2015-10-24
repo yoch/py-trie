@@ -11,7 +11,6 @@ class End:
 _END = End()    # sentinel (end of key)
 
 
-#TODO: implement proper copy
 #TODO: implement sortest and longest prefix lookups
 #TODO: implement pattern search ?
 
@@ -154,8 +153,9 @@ class Trie:
         # efficient merge trie 2 to trie 1
         def merge(t1, t2):
             for k, nd in t2.items():
-                if k in t1 and k is not _END:
-                    merge(t1[k], nd)
+                if k is not _END:
+                    node = t1.setdefault(k, self._NodeFactory())
+                    merge(node, nd)
                 else:
                     t1[k] = nd
         other = args[0] if len(args) >= 1 else ()
@@ -176,6 +176,9 @@ class Trie:
         # clear directly the whole trie
         self._root.clear()
         self._size = 0
+
+    def copy(self):
+        return Trie(self)
 
     def items(self, prefix=None):
         if prefix is None:
