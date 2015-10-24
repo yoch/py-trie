@@ -157,11 +157,12 @@ class Trie:
                     node = t1.setdefault(k, self._NodeFactory())
                     merge(node, nd)
                 else:
+                    if k not in t1:
+                        self._size += 1
                     t1[k] = nd
         other = args[0] if len(args) >= 1 else ()
         if isinstance(other, Trie):
             merge(self._root, other._root)
-            self._size += other._size
         elif isinstance(other, collections.abc.Mapping):
             for key in other:
                 self[key] = other[key]
