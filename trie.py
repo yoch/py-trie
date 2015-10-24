@@ -142,6 +142,14 @@ class Trie:
                 raise KeyError(key) from None
             return default
 
+    def popitem(self):
+        try:
+            key, value = next(self.items())
+        except StopIteration:
+            raise KeyError('popitem(): trie is empty') from None
+        del self[key]
+        return key, value
+
     def setdefault(self, key, default=None):
         try:
             return self.__get(key)
@@ -149,7 +157,7 @@ class Trie:
             self[key] = default
             return default
 
-    def update(self, *args, **kwargs):
+    def update(self, other=(), **kwargs):
         # efficient merge trie 2 to trie 1
         def merge(t1, t2):
             for k, nd in t2.items():
@@ -160,7 +168,6 @@ class Trie:
                     if k not in t1:
                         self._size += 1
                     t1[k] = nd
-        other = args[0] if len(args) >= 1 else ()
         if isinstance(other, Trie):
             merge(self._root, other._root)
         elif isinstance(other, collections.abc.Mapping):
@@ -179,7 +186,7 @@ class Trie:
         self._size = 0
 
     def copy(self):
-        return Trie(self)
+        return self.__class__(self)
 
     def items(self, prefix=None):
         if prefix is None:
@@ -260,5 +267,9 @@ class DefaultTrie(Trie):
             self[key] = value = self.default_factory()
         return value
 
+    def copy(self):
+        return self.__class__(self.default_factory, self)
+
     def __repr__(self):
-        return self.__class__.__name__ + '(' + repr(self.default_factory) + ')'
+        return '%s(%r, %r)' % (self.__class__.__name__,
+                              self.default_factory, dict(self))
