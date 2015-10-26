@@ -121,9 +121,13 @@ class Trie:
         return iter(k for k, v in self.items())
 
     def __eq__(self, other):
-        if type(self) != type(other):
+        # don't return True if mappings are equals,
+        # because trie keys semantic is particular
+        if isinstance(other, Trie):
+            return self._KeyFactory([]) == other._KeyFactory([]) \
+                   and self._root == other._root
+        else:
             return False
-        return self._root == other._root
 
     def __ne__(self, other):
         return not (self == other)
