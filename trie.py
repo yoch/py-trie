@@ -28,10 +28,10 @@ class Trie:
     @classmethod
     def _iterate_values(cls, node):
         for k, v in node.items():
-            if k is not _END:
-                yield from cls._iterate_values(v)
-            else:
+            if k is _END:
                 yield v
+            else:
+                yield from cls._iterate_values(v)
 
     @classmethod
     def _iterate_items(cls, node, lkey):
@@ -65,18 +65,20 @@ class Trie:
         return node[_END]
 
     def __pop(self, key):
+        # recursive function to cleanup
+        # empty nodes after __pop()
+        key_len = len(key)
         def rec_pop(node, i=0):
-            if i == len(key):
+            if i == key_len:
                 ret = node.pop(_END)
                 self._size -= 1
-                return ret
             else:
                 k = key[i]
                 nd = node[k]
                 ret = rec_pop(nd, i + 1)
                 if not nd:
                     del node[k]
-                return ret
+            return ret
         return rec_pop(self._root)
 
     def __init__(self, *args, **kwargs):
