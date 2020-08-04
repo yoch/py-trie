@@ -19,7 +19,7 @@ _END = End()    # sentinel (end of key)
 # and __contains__, which breaks DefaultTrie
 
 class Trie:
-    "keys must be a sequence"
+    "keys must be iterable"
 
     _NodeFactory = dict
     _KeyFactory = tuple
@@ -67,17 +67,17 @@ class Trie:
     def __pop(self, key):
         # recursive function to cleanup
         # empty nodes after __pop()
-        key_len = len(key)
-        def rec_pop(node, i=0):
-            if i == key_len:
+        it = iter(key)
+        def rec_pop(node):
+            try:
+                sym = next(it)
+                nd = node[sym]
+                ret = rec_pop(nd)
+                if not nd:
+                    del node[sym]
+            except StopIteration:
                 ret = node.pop(_END)
                 self._size -= 1
-            else:
-                k = key[i]
-                nd = node[k]
-                ret = rec_pop(nd, i + 1)
-                if not nd:
-                    del node[k]
             return ret
         return rec_pop(self._root)
 
