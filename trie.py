@@ -65,21 +65,21 @@ class Trie:
         return node[_END]
 
     def __pop(self, key):
-        # recursive function to cleanup
-        # empty nodes after __pop()
-        it = iter(key)
-        def rec_pop(node):
-            try:
-                sym = next(it)
-                nd = node[sym]
-                ret = rec_pop(nd)
-                if not nd:
-                    del node[sym]
-            except StopIteration:
-                ret = node.pop(_END)
-                self._size -= 1
-            return ret
-        return rec_pop(self._root)
+        node = self._root
+        path = []
+        for sym in key:
+            tmp = node[sym]
+            path.append((node, sym, tmp))
+            node = tmp
+        ret = node.pop(_END)
+        self._size -= 1
+        # cleanup, empty nodes after __pop()
+        for parent, sym, child in reversed(path):
+            if not child:
+                del parent[sym]
+            else:
+                break
+        return ret
 
     def __init__(self, *args, **kwargs):
         self._root = self._NodeFactory()
